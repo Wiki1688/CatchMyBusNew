@@ -64,14 +64,26 @@ export const CuteBusBanner: React.FC = () => {
         {/* 1. Sky Background */}
         <rect width="720" height="220" fill="url(#skyGrad)" />
 
-        {/* 2. Cheerful Sun with Smiling Face */}
-        <g id="cute-sun" transform="translate(630, 48)">
-          {/* Sun rays */}
-          <circle cx="0" cy="0" r="42" fill="#fde047" opacity="0.35" filter="url(#sunGlow)" />
+        {/* 2. Cheerful Animated Sun with Smiling Face */}
+        <g id="cute-sun" className="banner-sun" transform="translate(630, 48)">
+          {/* Sun glowing halo */}
+          <circle cx="0" cy="0" r="46" className="banner-sun-halo" fill="#fde047" opacity="0.35" filter="url(#sunGlow)" />
+          {/* Sun rotating ray petals */}
+          <g className="banner-sun-rays" style={{ transformOrigin: '0 0' }}>
+            <line x1="0" y1="-38" x2="0" y2="-46" stroke="#facc15" strokeWidth="3" strokeLinecap="round" />
+            <line x1="27" y1="-27" x2="33" y2="-33" stroke="#facc15" strokeWidth="3" strokeLinecap="round" />
+            <line x1="38" y1="0" x2="46" y2="0" stroke="#facc15" strokeWidth="3" strokeLinecap="round" />
+            <line x1="27" y1="27" x2="33" y2="33" stroke="#facc15" strokeWidth="3" strokeLinecap="round" />
+            <line x1="0" y1="38" x2="0" y2="46" stroke="#facc15" strokeWidth="3" strokeLinecap="round" />
+            <line x1="-27" y1="27" x2="-33" y2="33" stroke="#facc15" strokeWidth="3" strokeLinecap="round" />
+            <line x1="-38" y1="0" x2="-46" y2="0" stroke="#facc15" strokeWidth="3" strokeLinecap="round" />
+            <line x1="-27" y1="-27" x2="-33" y2="-33" stroke="#facc15" strokeWidth="3" strokeLinecap="round" />
+          </g>
+          {/* Sun core disk */}
           <circle cx="0" cy="0" r="32" fill="#facc15" />
-          {/* Sun blush */}
-          <circle cx="-14" cy="5" r="5" fill="#f87171" opacity="0.6" />
-          <circle cx="14" cy="5" r="5" fill="#f87171" opacity="0.6" />
+          {/* Sun blush cheeks */}
+          <circle cx="-14" cy="5" r="5" fill="#f87171" opacity="0.75" />
+          <circle cx="14" cy="5" r="5" fill="#f87171" opacity="0.75" />
           {/* Sun happy eyes */}
           <path d="M-15 -3 Q-11 -9 -7 -3" stroke="#854d0e" strokeWidth="2.5" strokeLinecap="round" fill="none" />
           <path d="M7 -3 Q11 -9 15 -3" stroke="#854d0e" strokeWidth="2.5" strokeLinecap="round" fill="none" />
@@ -79,16 +91,24 @@ export const CuteBusBanner: React.FC = () => {
           <path d="M-7 7 Q0 15 7 7" stroke="#854d0e" strokeWidth="2.5" strokeLinecap="round" fill="none" />
         </g>
 
-        {/* 3. Soft Fluffy Cartoon Clouds */}
-        <g id="fluffy-clouds" fill="#ffffff" opacity="0.95">
+        {/* 3. Soft Fluffy Cartoon Clouds - Animated horizontal drifting */}
+        <g id="fluffy-clouds" fill="#ffffff">
           {/* Left cloud */}
-          <path d="M 40 50 Q 55 30 75 42 Q 95 28 115 42 Q 130 38 135 52 Q 142 62 130 70 Q 110 75 55 72 Q 35 68 40 50 Z" />
+          <path
+            className="banner-cloud-1"
+            d="M 40 50 Q 55 30 75 42 Q 95 28 115 42 Q 130 38 135 52 Q 142 62 130 70 Q 110 75 55 72 Q 35 68 40 50 Z"
+            opacity="0.95"
+          />
           {/* Center-right high cloud */}
-          <path d="M 380 32 Q 395 18 412 28 Q 428 16 445 28 Q 458 24 462 36 Q 468 44 458 50 Q 438 54 395 52 Q 375 48 380 32 Z" opacity="0.85" />
+          <path
+            className="banner-cloud-2"
+            d="M 380 32 Q 395 18 412 28 Q 428 16 445 28 Q 458 24 462 36 Q 468 44 458 50 Q 438 54 395 52 Q 375 48 380 32 Z"
+            opacity="0.88"
+          />
         </g>
 
         {/* 4. Cheerful Cityscape Silhouettes (Singapore MBS & Supertree vibe) */}
-        <g id="city-silhouettes" fill="#93c5fd" opacity="0.55">
+        <g id="city-silhouettes" fill="#93c5fd" opacity="0.6">
           {/* Marina Bay Sands stylized curve towers */}
           <rect x="520" y="70" width="18" height="85" rx="3" />
           <rect x="544" y="65" width="18" height="90" rx="3" />
@@ -104,8 +124,8 @@ export const CuteBusBanner: React.FC = () => {
         {/* 5. Rolling Green Tropical Hills */}
         <path d="M 0 160 Q 180 125 380 150 Q 560 170 720 142 L 720 220 L 0 220 Z" fill="url(#hillGrad)" />
 
-        {/* Tropical palm trees on the left */}
-        <g id="tropical-palm" transform="translate(35, 95)">
+        {/* Tropical palm trees on the left with animated gentle sway */}
+        <g id="tropical-palm" className="banner-palm" transform="translate(35, 95)" style={{ transformOrigin: '30px 65px' }}>
           <path d="M 30 65 Q 26 35 15 15" stroke="#78350f" strokeWidth="5" strokeLinecap="round" fill="none" />
           {/* Fronds */}
           <path d="M 15 15 Q -10 5 -25 20" stroke="#15803d" strokeWidth="4" strokeLinecap="round" fill="none" />
@@ -116,23 +136,31 @@ export const CuteBusBanner: React.FC = () => {
           <circle cx="19" cy="16" r="3" fill="#ca8a04" />
         </g>
 
-        {/* 6. Clean Modern Roadway */}
+        {/* 6. Clean Modern Roadway with Moving Center Lines */}
         <g id="road-surface">
           <path d="M 0 162 L 720 162 L 720 220 L 0 220 Z" fill="#334155" />
           {/* Road curb in bright curb yellow/white stripes */}
           <rect x="0" y="159" width="720" height="4" fill="#fbbf24" />
-          {/* Dashed highway center lines */}
-          <line x1="20" y1="192" x2="80" y2="192" stroke="#ffffff" strokeWidth="5" strokeDasharray="45 35" />
-          <line x1="120" y1="192" x2="700" y2="192" stroke="#ffffff" strokeWidth="5" strokeDasharray="45 35" />
+          {/* Dashed highway center lines with continuous forward motion */}
+          <line
+            className="banner-road-lines"
+            x1="-80"
+            y1="192"
+            x2="800"
+            y2="192"
+            stroke="#ffffff"
+            strokeWidth="5"
+            strokeDasharray="45 35"
+          />
         </g>
 
-        {/* 7. Cute Cartoon Caricature Double-Decker Singapore Bus */}
-        <g id="cute-double-decker-bus" filter="url(#busShadow)" transform="translate(130, 20)">
-          {/* Speed / motion puff behind */}
-          <g opacity="0.8">
-            <ellipse cx="20" cy="148" rx="16" ry="8" fill="#ffffff" />
-            <ellipse cx="0" cy="142" rx="12" ry="6" fill="#ffffff" opacity="0.6" />
-            <ellipse cx="-15" cy="146" rx="8" ry="4" fill="#ffffff" opacity="0.4" />
+        {/* 7. Cute Cartoon Caricature Double-Decker Singapore Bus with Suspension Bounce */}
+        <g id="cute-double-decker-bus" className="banner-bus" filter="url(#busShadow)" transform="translate(130, 20)">
+          {/* Animated Speed / Exhaust motion puffs behind */}
+          <g className="banner-exhaust-group" opacity="0.85">
+            <ellipse className="banner-smoke-1" cx="20" cy="148" rx="16" ry="8" fill="#ffffff" />
+            <ellipse className="banner-smoke-2" cx="4" cy="143" rx="12" ry="6" fill="#ffffff" />
+            <ellipse className="banner-smoke-3" cx="-14" cy="146" rx="8" ry="4" fill="#ffffff" />
           </g>
 
           {/* Main Bus Body: Chunky, cheerful, rounded caricature */}
@@ -158,23 +186,29 @@ export const CuteBusBanner: React.FC = () => {
             <rect x="52" y="34" width="44" height="46" rx="10" fill="url(#windowGlass)" stroke="#065f46" strokeWidth="2.5" />
 
             {/* Cute waving cartoon passenger 1 (Upper middle) */}
-            <circle cx="212" cy="54" r="11" fill="#fcd34d" />
-            {/* Cute bear ears */}
-            <circle cx="204" cy="45" r="4" fill="#f59e0b" />
-            <circle cx="220" cy="45" r="4" fill="#f59e0b" />
-            {/* Face */}
-            <circle cx="209" cy="53" r="1.8" fill="#1e293b" />
-            <circle cx="215" cy="53" r="1.8" fill="#1e293b" />
-            <path d="M210 57 Q212 60 214 57" stroke="#1e293b" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-            {/* Waving paw */}
-            <circle cx="230" cy="50" r="5" fill="#fcd34d" />
+            <g className="banner-passenger-1">
+              <circle cx="212" cy="54" r="11" fill="#fcd34d" />
+              {/* Cute bear ears */}
+              <circle cx="204" cy="45" r="4" fill="#f59e0b" />
+              <circle cx="220" cy="45" r="4" fill="#f59e0b" />
+              {/* Face */}
+              <circle cx="209" cy="53" r="1.8" fill="#1e293b" />
+              <circle cx="215" cy="53" r="1.8" fill="#1e293b" />
+              <path d="M210 57 Q212 60 214 57" stroke="#1e293b" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+              {/* Animated Waving paw */}
+              <g className="banner-waving-paw" style={{ transformOrigin: '228px 52px' }}>
+                <circle cx="230" cy="50" r="5" fill="#fcd34d" />
+              </g>
+            </g>
 
             {/* Cute passenger 2 (Upper front) */}
-            <circle cx="286" cy="53" r="11" fill="#fda4af" />
-            <circle cx="283" cy="52" r="1.8" fill="#1e293b" />
-            <circle cx="289" cy="52" r="1.8" fill="#1e293b" />
-            <path d="M284 56 Q286 59 288 56" stroke="#1e293b" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-            <circle cx="298" cy="49" r="4.5" fill="#fda4af" />
+            <g className="banner-passenger-2">
+              <circle cx="286" cy="53" r="11" fill="#fda4af" />
+              <circle cx="283" cy="52" r="1.8" fill="#1e293b" />
+              <circle cx="289" cy="52" r="1.8" fill="#1e293b" />
+              <path d="M284 56 Q286 59 288 56" stroke="#1e293b" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+              <circle cx="298" cy="49" r="4.5" fill="#fda4af" />
+            </g>
           </g>
 
           {/* Lower Deck Windows & Doors */}
@@ -210,7 +244,7 @@ export const CuteBusBanner: React.FC = () => {
           </g>
 
           {/* LED Electronic Route Destination Sign above front windshield */}
-          <g id="led-destination-display">
+          <g id="led-destination-display" className="banner-led-sign">
             <rect x="330" y="12" width="62" height="18" rx="5" fill="#0f172a" stroke="#334155" strokeWidth="1.5" />
             <text x="361" y="24" fill="#fbbf24" fontSize="8" fontWeight="800" textAnchor="middle" fontFamily="monospace" letterSpacing="0.5">
               CATCH BUS
@@ -233,24 +267,32 @@ export const CuteBusBanner: React.FC = () => {
             <path d="M 375 149 Q 390 157 403 148" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" fill="none" />
           </g>
 
-          {/* Chunky Cartoon Wheels with bright rims */}
+          {/* Chunky Cartoon Wheels with animated rotating rims */}
           {/* Rear Wheel */}
           <g id="rear-wheel" transform="translate(108, 150)">
             <circle cx="0" cy="0" r="24" fill="#1e293b" />
             <circle cx="0" cy="0" r="16" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="2" />
-            <circle cx="0" cy="0" r="8" fill="#10b981" />
-            <circle cx="0" cy="0" r="3" fill="#ffffff" />
+            <g className="banner-wheel-spin" style={{ transformOrigin: '0 0' }}>
+              <circle cx="0" cy="0" r="8" fill="#10b981" />
+              <circle cx="0" cy="-6" r="2.2" fill="#ffffff" />
+              <circle cx="5.2" cy="3" r="2.2" fill="#ffffff" />
+              <circle cx="-5.2" cy="3" r="2.2" fill="#ffffff" />
+            </g>
           </g>
           {/* Front Wheel */}
           <g id="front-wheel" transform="translate(345, 150)">
             <circle cx="0" cy="0" r="24" fill="#1e293b" />
             <circle cx="0" cy="0" r="16" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="2" />
-            <circle cx="0" cy="0" r="8" fill="#10b981" />
-            <circle cx="0" cy="0" r="3" fill="#ffffff" />
+            <g className="banner-wheel-spin" style={{ transformOrigin: '0 0' }}>
+              <circle cx="0" cy="0" r="8" fill="#10b981" />
+              <circle cx="0" cy="-6" r="2.2" fill="#ffffff" />
+              <circle cx="5.2" cy="3" r="2.2" fill="#ffffff" />
+              <circle cx="-5.2" cy="3" r="2.2" fill="#ffffff" />
+            </g>
           </g>
 
-          {/* Cute Little Bird perched on the roof with tiny sunglasses */}
-          <g id="cute-bird" transform="translate(170, 10)">
+          {/* Cute Little Bird perched on the roof with tiny sunglasses and animated bob */}
+          <g id="cute-bird" className="banner-bird" transform="translate(170, 10)" style={{ transformOrigin: '0 0' }}>
             <ellipse cx="0" cy="0" rx="9" ry="7" fill="#38bdf8" />
             <circle cx="7" cy="-3" r="5" fill="#38bdf8" />
             <polygon points="12,-4 17,-2 12,0" fill="#f97316" />
