@@ -1532,6 +1532,16 @@ html, body {
   margin-bottom: 0;
 }
 
+.app-footer a {
+  color: var(--primary-color);
+  text-decoration: underline;
+  word-break: break-word;
+}
+
+.app-footer a:hover {
+  color: var(--primary-hover);
+}
+
 /* Mobile Screen Layout Safeguards (360px Android and 375px iPhone) */
 @media (max-width: 400px) {
   .app-container {
