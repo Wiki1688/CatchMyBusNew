@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { BusArrivalData, RainData, FavouriteStop, StopInfo, StopSearchResult, FetchState, SENTENCES } from '../types.ts';
 import { getBus, getRain, getStop, searchStops } from '../data.js';
 import { WeatherPanel } from './WeatherPanel.tsx';
+import { DisqusComments } from './DisqusComments.tsx';
 
 interface LiveArrivalsScreenProps {
   favourites: FavouriteStop[];
@@ -464,6 +465,9 @@ export const LiveArrivalsScreen: React.FC<LiveArrivalsScreenProps> = ({
         errorStatus={rainErrorStatus}
         idPrefix="live"
       />
+
+      {/* Disqus Comments Section */}
+      <DisqusComments />
     </div>
   );
 };
