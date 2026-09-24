@@ -30,25 +30,22 @@ export const DisqusComments: React.FC = () => {
 
     try {
       // Set Disqus configuration variables safely
-      window.disqus_config = function (this: DisqusContext) {
-        if (!this.page) {
-          this.page = {};
+      const setupDisqusConfig = function (this: DisqusContext | void) {
+        const ctx: DisqusContext = (this && typeof this === 'object') ? (this as DisqusContext) : ((window as unknown) as DisqusContext);
+        if (!ctx.page) {
+          ctx.page = {};
         }
-        this.page.url = pageUrl;
-        this.page.identifier = pageIdentifier;
+        ctx.page.url = pageUrl;
+        ctx.page.identifier = pageIdentifier;
       };
 
+      window.disqus_config = setupDisqusConfig as (this: DisqusContext) => void;
+
       // Load the Disqus script only once, even when re-rendered or tab-switched
-      if (window.DISQUS) {
+      if (window.DISQUS && typeof window.DISQUS.reset === 'function') {
         window.DISQUS.reset({
           reload: true,
-          config: function (this: DisqusContext) {
-            if (!this.page) {
-              this.page = {};
-            }
-            this.page.url = pageUrl;
-            this.page.identifier = pageIdentifier;
-          },
+          config: setupDisqusConfig as (this: DisqusContext) => void,
         });
       } else if (!document.getElementById('disqus-embed-script')) {
         const s = document.createElement('script');

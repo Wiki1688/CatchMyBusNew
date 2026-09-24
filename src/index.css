@@ -1489,6 +1489,31 @@ html, body {
   font-weight: 600;
 }
 
+/* Disqus Community Feedback Card */
+.disqus-card {
+  margin-top: 20px;
+  margin-bottom: 12px;
+  padding: 18px 16px;
+  background-color: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.disqus-invite-line {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 16px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+#disqus_thread {
+  min-height: 160px;
+  width: 100%;
+}
+
 /* Footer & Legal Attribution */
 .app-footer {
   padding: 20px 16px;
