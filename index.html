@@ -9,6 +9,39 @@
     <meta property="og:description" content="Mobile-first Singapore bus arrival and weather forecast web app." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      (function() {
+        function isExternalScriptError(msg, src) {
+          return msg === 'Script error.' ||
+            (typeof msg === 'string' && (msg.indexOf('disqus') !== -1 || msg.indexOf('Disqus') !== -1)) ||
+            (typeof src === 'string' && (src.indexOf('disqus') !== -1 || src.indexOf('disquscdn') !== -1));
+        }
+        window.addEventListener('error', function(event) {
+          if (isExternalScriptError(event.message, event.filename)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+        var origOnError = window.onerror;
+        window.onerror = function(msg, url, lineNo, colNo, err) {
+          if (isExternalScriptError(msg, url)) {
+            return true;
+          }
+          if (typeof origOnError === 'function') {
+            return origOnError.apply(this, arguments);
+          }
+          return false;
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+          var str = event.reason ? (event.reason.message || String(event.reason)) : '';
+          if (isExternalScriptError(str, '')) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+        }, true);
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />

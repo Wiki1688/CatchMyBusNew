@@ -1,12 +1,23 @@
 import React, { useEffect } from 'react';
 
+interface DisqusPageConfig {
+  url?: string;
+  identifier?: string;
+  [key: string]: unknown;
+}
+
+interface DisqusContext {
+  page?: DisqusPageConfig;
+  [key: string]: unknown;
+}
+
 declare global {
   interface Window {
-    disqus_config?: (this: { page: { url: string; identifier: string } }) => void;
+    disqus_config?: (this: DisqusContext) => void;
     DISQUS?: {
       reset: (options: {
         reload: boolean;
-        config?: (this: { page: { url: string; identifier: string } }) => void;
+        config?: (this: DisqusContext) => void;
       }) => void;
     };
   }
@@ -17,28 +28,43 @@ export const DisqusComments: React.FC = () => {
     const pageUrl = 'https://catchmybusnew.vercel.app';
     const pageIdentifier = 'home';
 
-    // Set Disqus configuration variables
-    window.disqus_config = function () {
-      this.page.url = pageUrl;
-      this.page.identifier = pageIdentifier;
-    };
+    try {
+      // Set Disqus configuration variables safely
+      window.disqus_config = function (this: DisqusContext) {
+        if (!this.page) {
+          this.page = {};
+        }
+        this.page.url = pageUrl;
+        this.page.identifier = pageIdentifier;
+      };
 
-    // Load the Disqus script only once, even when re-rendered or tab-switched
-    if (window.DISQUS) {
-      window.DISQUS.reset({
-        reload: true,
-        config: function () {
-          this.page.url = pageUrl;
-          this.page.identifier = pageIdentifier;
-        },
-      });
-    } else if (!document.getElementById('disqus-embed-script')) {
-      const s = document.createElement('script');
-      s.id = 'disqus-embed-script';
-      s.src = 'https://catchmybus.disqus.com/embed.js';
-      s.setAttribute('data-timestamp', String(+new Date()));
-      s.async = true;
-      (document.head || document.body).appendChild(s);
+      // Load the Disqus script only once, even when re-rendered or tab-switched
+      if (window.DISQUS) {
+        window.DISQUS.reset({
+          reload: true,
+          config: function (this: DisqusContext) {
+            if (!this.page) {
+              this.page = {};
+            }
+            this.page.url = pageUrl;
+            this.page.identifier = pageIdentifier;
+          },
+        });
+      } else if (!document.getElementById('disqus-embed-script')) {
+        const s = document.createElement('script');
+        s.id = 'disqus-embed-script';
+        s.src = 'https://catchmybus.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', String(+new Date()));
+        s.async = true;
+        s.onerror = (e) => {
+          if (typeof e === 'object' && e && 'preventDefault' in e) {
+            (e as Event).preventDefault();
+          }
+        };
+        (document.head || document.body).appendChild(s);
+      }
+    } catch {
+      // Ignore initialization errors in restricted sandboxes
     }
   }, []);
 
