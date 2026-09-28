@@ -727,7 +727,7 @@ A code that doesn't exist should show a clear "not found" message at once, keep 
 ### 2. Repair R1 — unknown stop code shown as "no bus services" (H9, severity 3 after arbiter; raised by RK, also my Finding 2)
 
 Coding agent: Google AI Studio (Gemini 3.8 Flash), in my existing CatchMyBusNew project, Mon 28 Sep 2026.
-Before any change: screenshot of the 88888 screen saved; shareable link to the deployment my groupmates reviewed: (https://catchmybusnew.vercel.app/).
+Before any change: screenshot of the 88888 screen saved; shareable link to the deployment my groupmates reviewed: [(https://catchmybusnew.vercel.app/).](https://catchmybusnew-bxt1terln-mgmt-6110-group-2.vercel.app?_vercel_share=Q8WSz3pCdCRkiAjGgALToO0rFn906hsF)
 
 **Sceptical-developer prompt sent:**
 
