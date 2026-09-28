@@ -72,11 +72,21 @@ export default async function handler(req, res) {
 
       const nextBus = svc.NextBus || busList[0] || {};
       const load = typeof nextBus.Load === 'string' ? nextBus.Load.trim() : '';
+      let destinationCode = typeof nextBus.DestinationCode === 'string' ? nextBus.DestinationCode.trim() : '';
+      if (!destinationCode) {
+        for (const b of busList) {
+          if (b && typeof b.DestinationCode === 'string' && b.DestinationCode.trim()) {
+            destinationCode = b.DestinationCode.trim();
+            break;
+          }
+        }
+      }
 
       return {
         serviceNo: String(svc.ServiceNo || ''),
         next: nextMinutes,
         load,
+        destinationCode,
       };
     });
 

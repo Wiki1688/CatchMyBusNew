@@ -4,6 +4,38 @@ import { getBus, getRain, getStop, searchStops } from '../data.js';
 import { WeatherPanel } from './WeatherPanel.tsx';
 import { DisqusComments } from './DisqusComments.tsx';
 
+// Module-level cache for resolved bus stop descriptions to avoid duplicate network fetches
+const destinationNameCache: Record<string, string> = {};
+const pendingDestinationFetches: Record<string, Promise<string | null>> = {};
+
+function getCachedDestination(code?: string): string | null {
+  if (!code) return null;
+  return destinationNameCache[code.trim()] || null;
+}
+
+async function resolveDestinationName(code: string): Promise<string | null> {
+  const clean = String(code || '').trim();
+  if (!/^\d{5}$/.test(clean)) return null;
+  if (destinationNameCache[clean]) return destinationNameCache[clean];
+
+  if (!pendingDestinationFetches[clean]) {
+    pendingDestinationFetches[clean] = getStop(clean)
+      .then((stop) => {
+        const desc = stop?.description ? String(stop.description).trim() : '';
+        if (desc) {
+          destinationNameCache[clean] = desc;
+        }
+        return desc || null;
+      })
+      .catch(() => null)
+      .finally(() => {
+        delete pendingDestinationFetches[clean];
+      });
+  }
+
+  return pendingDestinationFetches[clean];
+}
+
 interface LiveArrivalsScreenProps {
   favourites: FavouriteStop[];
   onToggleFavourite: (
@@ -36,6 +68,9 @@ export const LiveArrivalsScreen: React.FC<LiveArrivalsScreenProps> = ({
   const [busErrorStatus, setBusErrorStatus] = useState<string | number>('unknown');
 
   const [stopInfo, setStopInfo] = useState<StopInfo | null>(null);
+  const [destinations, setDestinations] = useState<Record<string, string>>(() => ({
+    ...destinationNameCache,
+  }));
 
   const [rainData, setRainData] = useState<RainData | null>(null);
   const [rainState, setRainState] = useState<FetchState>('loading');
@@ -129,6 +164,9 @@ export const LiveArrivalsScreen: React.FC<LiveArrivalsScreenProps> = ({
         if (activeRequestIdRef.current !== currentReqId) return;
         stopSettled = true;
         setStopInfo(info);
+        if (info?.stopCode && info.description) {
+          destinationNameCache[info.stopCode] = info.description;
+        }
         // If getBus already returned empty, we can now show empty state
         if (hasBusReturnedEmpty) {
           setBusData(pendingEmptyBusData);
@@ -248,6 +286,27 @@ export const LiveArrivalsScreen: React.FC<LiveArrivalsScreenProps> = ({
 
     return () => clearInterval(timer);
   }, [activeStopCode, busState, fetchBusData, fetchRainData]);
+
+  // Resolve destination codes to stop descriptions using /api/stop
+  useEffect(() => {
+    if (!busData?.services || busData.services.length === 0) return;
+
+    const codes = busData.services
+      .map((s) => s.destinationCode?.trim())
+      .filter((c): c is string => Boolean(c && /^\d{5}$/.test(c)));
+
+    const uniqueCodes: string[] = Array.from(new Set<string>(codes));
+    uniqueCodes.forEach((code) => {
+      resolveDestinationName(code).then((name) => {
+        if (name) {
+          setDestinations((prev) => {
+            if (prev[code] === name) return prev;
+            return { ...prev, [code]: name };
+          });
+        }
+      });
+    });
+  }, [busData]);
 
   // Handle stop code submission
   const handleShowBuses = (e: React.FormEvent) => {
@@ -445,6 +504,10 @@ export const LiveArrivalsScreen: React.FC<LiveArrivalsScreenProps> = ({
             {busData.services.map((svc) => {
               const starred = isStarred(svc.serviceNo);
               const crowding = formatCrowding(svc.load);
+              const destinationName =
+                (svc.destinationCode && destinations[svc.destinationCode]) ||
+                getCachedDestination(svc.destinationCode);
+
               return (
                 <li key={svc.serviceNo} className="service-row" id={`service-row-${svc.serviceNo}`}>
                   <div className="service-main">
@@ -453,6 +516,11 @@ export const LiveArrivalsScreen: React.FC<LiveArrivalsScreenProps> = ({
                       <span className="service-arrivals">
                         {formatArrivals(svc.serviceNo, svc.next)}
                       </span>
+                      {destinationName && (
+                        <span className="service-destination" id={`service-destination-${svc.serviceNo}`}>
+                          → {destinationName}
+                        </span>
+                      )}
                       {crowding && svc.next && svc.next.length > 0 && (
                         <span className={`service-crowding ${svc.load ? svc.load.toLowerCase() : ''}`}>
                           {crowding}
