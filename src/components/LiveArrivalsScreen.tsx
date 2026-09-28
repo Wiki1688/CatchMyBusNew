@@ -94,6 +94,11 @@ export const LiveArrivalsScreen: React.FC<LiveArrivalsScreenProps> = ({
 
   // Handle selecting a bus stop from the shortlisted list
   const handleSelectShortlistedStop = (stop: StopSearchResult) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    setSearchQuery('');
+    setShortlistedStops([]);
     setStopCodeInput(stop.stopCode);
     localStorage.setItem('catchMyBus.lastStopCode', stop.stopCode);
     setActiveStopCode(stop.stopCode);
