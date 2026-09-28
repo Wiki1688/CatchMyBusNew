@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { RainData, FetchState, SENTENCES } from '../types.ts';
 import { WeatherIcon } from './WeatherIcon.tsx';
 
@@ -19,6 +19,29 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
   errorStatus = 'unknown',
   idPrefix = 'main',
 }) => {
+  const [isChangingArea, setIsChangingArea] = useState<boolean>(false);
+  const changeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (changeTimeoutRef.current) {
+        clearTimeout(changeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleAreaChange = (newArea: string) => {
+    if (newArea === selectedArea) return;
+    onSelectArea(newArea);
+    setIsChangingArea(true);
+    if (changeTimeoutRef.current) {
+      clearTimeout(changeTimeoutRef.current);
+    }
+    changeTimeoutRef.current = setTimeout(() => {
+      setIsChangingArea(false);
+    }, 350);
+  };
+
   const currentAreaForecast = rainData?.areas.find(
     (a) => a.area.toLowerCase() === selectedArea.toLowerCase()
   );
@@ -45,7 +68,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
           id={`${idPrefix}-area-select`}
           className="area-dropdown"
           value={selectedArea}
-          onChange={(e) => onSelectArea(e.target.value)}
+          onChange={(e) => handleAreaChange(e.target.value)}
         >
           {areaOptions.map((areaName) => (
             <option key={areaName} value={areaName}>
@@ -55,7 +78,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
         </select>
       </div>
 
-      {fetchState === 'loading' && (
+      {(fetchState === 'loading' || (isChangingArea && fetchState === 'success')) && (
         <div className="status-banner loading" id={`${idPrefix}-rain-loading`}>
           {SENTENCES.RAIN.loading(selectedArea)}
         </div>
@@ -79,12 +102,12 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
         </div>
       )}
 
-      {fetchState === 'success' && currentAreaForecast && (
+      {!isChangingArea && fetchState === 'success' && currentAreaForecast && (
         <div className="weather-details" id={`${idPrefix}-weather-details`}>
           <div className="weather-condition-row">
             <WeatherIcon forecast={currentAreaForecast.forecast} size={32} />
             <div className="weather-condition" id={`${idPrefix}-weather-wording`}>
-              {currentAreaForecast.forecast}
+              {selectedArea}: {currentAreaForecast.forecast}
             </div>
           </div>
           {rainData?.validPeriod && (
@@ -100,7 +123,7 @@ export const WeatherPanel: React.FC<WeatherPanelProps> = ({
         </div>
       )}
 
-      {fetchState === 'success' && !currentAreaForecast && (
+      {!isChangingArea && fetchState === 'success' && !currentAreaForecast && (
         <div className="status-banner empty">
           {SENTENCES.RAIN.empty(selectedArea)}
         </div>
