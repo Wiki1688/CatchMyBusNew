@@ -58,6 +58,7 @@ export const LiveArrivalsScreen: React.FC<LiveArrivalsScreenProps> = ({
   const [shortlistedStops, setShortlistedStops] = useState<StopSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activeRequestIdRef = useRef<number>(0);
 
   // Debounced search for bus stop description or road name
   useEffect(() => {
@@ -109,30 +110,79 @@ export const LiveArrivalsScreen: React.FC<LiveArrivalsScreenProps> = ({
       return;
     }
 
+    const currentReqId = ++activeRequestIdRef.current;
     setBusState('loading');
+
+    let stopSettled = false;
+    let isStopNotFound = false;
+    let hasBusReturnedEmpty = false;
+    let pendingEmptyBusData: BusArrivalData | null = null;
 
     // Fetch stop info (official description, road name, nearby stops)
     getStop(code)
       .then((info) => {
+        if (activeRequestIdRef.current !== currentReqId) return;
+        stopSettled = true;
         setStopInfo(info);
+        // If getBus already returned empty, we can now show empty state
+        if (hasBusReturnedEmpty) {
+          setBusData(pendingEmptyBusData);
+          setBusState('empty');
+        }
       })
       .catch((err: any) => {
+        if (activeRequestIdRef.current !== currentReqId) return;
+        stopSettled = true;
         setStopInfo(null);
         if (err?.code === 'not_found') {
+          // Rule (2): if getStop rejects with not_found, set busState to not_found
+          isStopNotFound = true;
+          setBusData(null);
           setBusState('not_found');
+        } else {
+          // If stop lookup had another error (e.g. network/unreachable),
+          // and getBus already returned empty, we show empty state
+          if (hasBusReturnedEmpty) {
+            setBusData(pendingEmptyBusData);
+            setBusState('empty');
+          }
         }
       });
 
     try {
       const data = await getBus(code);
+      if (activeRequestIdRef.current !== currentReqId) return;
+
+      // Rule (3): never let an empty or success bus result overwrite a not_found state
+      if (isStopNotFound) {
+        return;
+      }
+
       if (!data || !data.services || data.services.length === 0) {
-        setBusData(data);
-        setBusState('empty');
+        // Bus returned empty
+        hasBusReturnedEmpty = true;
+        pendingEmptyBusData = data;
+
+        // Rule (4): if getBus returns empty before getStop has answered,
+        // keep the loading/"Checking…" state until getStop settles.
+        if (stopSettled) {
+          setBusData(data);
+          setBusState('empty');
+        }
       } else {
+        // Bus returned services
+        // Rule (1): show arrivals as soon as getBus returns, do not wait for getStop
         setBusData(data);
         setBusState('success');
       }
     } catch (err: any) {
+      if (activeRequestIdRef.current !== currentReqId) return;
+
+      // Rule (3): never let a bus error overwrite a not_found state
+      if (isStopNotFound) {
+        return;
+      }
+
       const codeType = err?.code;
       const statusVal = err?.status || err?.statusCode || 'unknown';
       setBusErrorStatus(statusVal);
@@ -180,14 +230,19 @@ export const LiveArrivalsScreen: React.FC<LiveArrivalsScreenProps> = ({
   }, [activeStopCode, fetchBusData, fetchRainData]);
 
   // Refresh every 20 seconds, matching LTA update frequency
+  // Rule (2): stop the 20-second refresh for that code if not_found
   useEffect(() => {
+    if (busState === 'not_found') {
+      return;
+    }
+
     const timer = setInterval(() => {
       fetchBusData(activeStopCode);
       fetchRainData();
     }, 20000);
 
     return () => clearInterval(timer);
-  }, [activeStopCode, fetchBusData, fetchRainData]);
+  }, [activeStopCode, busState, fetchBusData, fetchRainData]);
 
   // Handle stop code submission
   const handleShowBuses = (e: React.FormEvent) => {
