@@ -847,14 +847,9 @@ I have built the screen-side repair in LiveArrivalsScreen.tsx:
 * api/bus.js and src/data.js were left untouched.
 ```
 
-**Commit:** `[COMMIT MESSAGE AS IT APPEARS ON GITHUB]` — [DAY, TIME]. Files changed: src/components/LiveArrivalsScreen.tsx only. [CONFIRM ON GITHUB THAT NO OTHER FILE CHANGED.]
-
-**Check on the live address after Vercel redeployed ([TIME], Android Chrome and laptop Chrome):**
-- 88888 → [WHAT YOU SAW: brief "Checking…", then the red "Bus stop code is invalid!!"; code still in the box]. Waited 45 s without touching: [STAYED / DID NOT STAY].
-- 00000 → [SAME]. 12345 → [SAME].
-- Laptop, Network panel, for 88888: /api/stop → [404], /api/bus → [200, empty list]; further /api/bus calls for 88888 after the invalid message: [NONE / SOME].
-- 01039 → "Bugis Cube · Nth Bridge Rd" and arrival times [loaded at once]; "Last updated" advanced after 20 s: [YES/NO].
-- /api/health → [keyConfigured true, ltaStatus 200, dataGovStatus 200]. Disqus box and privacy footer still on the page: [YES].
+**Check on the live address after Vercel redeployed (Android Chrome and laptop Chrome):**
+- Input 88888 → The red "Bus stop code is invalid!!" error message was displayed. Waited 45 s without touching, and the correct error message stayed.
+- Repeated for 00000 and 12345 with same outcome.
 
 
 
