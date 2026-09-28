@@ -724,6 +724,137 @@ A code that doesn't exist should show a clear "not found" message at once, keep 
 **Repair line carried into R1 (merged from A's and B's repairs, as the arbiter suggested):** a code that does not exist shows a clear "not found" message at once and keeps what was typed; a "checking…" message shows until the app has an answer; and once a code is marked invalid, a later refresh never replaces that with "no bus services".
 
 
+### 2. Repair R1 — unknown stop code shown as "no bus services" (H9, severity 3 after arbiter; raised by RK, also my Finding 2)
+
+Coding agent: Google AI Studio (Gemini 3.8 Flash), in my existing CatchMyBusNew project, Mon 28 Sep 2026.
+Before any change: screenshot of the 88888 screen saved; shareable link to the deployment my groupmates reviewed: (https://catchmybusnew.vercel.app/).
+
+**Sceptical-developer prompt sent:**
+
+```
+ROLE: You are a sceptical senior developer and usability reviewer working in my
+existing project. Before you write any code, your job is to argue against the repair
+I propose.
+
+CONTEXT:
+- Live address: https://catchmybusnew.vercel.app/
+- Who the product is for, and what it does for them: a bus commuter who wants to see,
+  at the stop, when her usual buses are coming and what the weather is doing there.
+- The finding, in its six lines:
+Where: Live Arrivals screen, stop code box.
+What they did, what they saw: Entered 88888 / 00000 and pressed Show buses. The app
+said "No bus services at bus stop 88888 right now!!". At every automatic refresh
+(about 20 s) the red "Bus stop code is invalid!!" banner flashed for a split second
+and then the "no bus services" message came back. The invalid message stayed only
+after pressing Show buses several times.
+Which heuristic: 9, Help Users Recognize, Diagnose, and Recover from Errors.
+Screen or system: System. /api/bus returns 200 with an empty list for a code that
+does not exist, while /api/stop returns 404; on screen the two answers race and the
+bus answer usually arrives last and wins.
+Severity, and why: 3, driven by whether the person can learn around it. Reviewer gave
+1, builder gave 3, a blind arbiter gave 2 provisionally and moved it to 3 after the
+live test showed the correction never holds.
+The repair: a code that does not exist shows a clear "not found" message at once and
+keeps what was typed; a "checking…" message shows until the app has an answer; and
+once a code is marked invalid, a later refresh never replaces that with "no bus
+services".
+- The evidence behind it: 2 of 5 reviewers raised it (one groupmate and the builder);
+  arbiter 3.
+- The repair I propose: in api/bus.js, check the code against the LTA bus-stop list
+  (already loaded and cached by api/stop.js) before calling BusArrival, and return
+  404 {"error":"Bus stop code not found."} for unknown codes; in src/data.js treat
+  404 as not_found; in LiveArrivalsScreen.tsx keep the "checking" state until both
+  lookups have answered, and never let an empty bus result overwrite a not_found
+  state.
+
+GOAL: Argue against my repair.
+1. Does it solve the problem the finding describes, or a problem I already believed I
+   had? Say which, and why.
+2. Does the problem belong to the screen or to the system, and does my repair sit in
+   the right half?
+3. Name one heuristic this repair could break while it serves the one above, and how.
+4. Propose the smallest alternative that would make the same thing true.
+5. Tell me exactly what to do on the live address to check that the repair worked.
+
+OUTPUT: Your arguments first, as a numbered list. Then stop. Write no code until I
+reply with the repair I have chosen.
+
+GUARDRAILS: Do not tell me the repair is good. If you have no strong reason to doubt
+it, say so plainly instead of inventing one. When I do ask you to build, change only
+what the repair needs. Do not remove Disqus or the privacy notice,
+and do not break /api/health.
+```
+
+**Agent's arguments (verbatim, Gemini 3.8 Flash, ran for 69 s):**
+
+```
+Here is my usability and architectural review of your proposed repair:
+
+1. Does it solve the problem the finding describes, or a problem I already believed I had?
+It primarily solves a problem you believed you had (that /api/bus is broken because it does not independently validate stop existence), rather than the actual defect captured in the finding.
+   * Why: In LiveArrivalsScreen.tsx, fetchBusData currently launches getStop(code) and getBus(code) concurrently as uncoordinated requests. /api/stop already validates the stop against LTA's master stop list and promptly returns a 404, which briefly triggers setBusState('not_found'). However, getBus resolves its await milliseconds later, sees an empty services array from LTA, and blindly calls setBusState('empty'), wiping out the error banner. The 20-second automatic refresh timer then repeatedly re-triggers this exact race condition.
+   * Furthermore, your assumption that api/bus.js can check a cache "already loaded and cached by api/stop.js" is an architectural misconception in a serverless environment like Vercel. Serverless route handlers run in isolated container instances; api/bus.js cannot read in-memory module variables from api/stop.js.
+
+2. Does the problem belong to the screen or to the system, and does my repair sit in the right half?
+The problem belongs to the screen, and your repair sits largely in the wrong half (system).
+   * System side: LTA Datamall's BusArrival endpoint returning Services: [] for any stop with zero active arrivals is standard API behaviour, not an error. You already have a dedicated endpoint (/api/stop) whose single responsibility is stop lookup and geographic validation. Forcing api/bus.js to also become an authoritative stop validator means it must duplicate the 10-page pagination (5,000+ stops) on cold start, adding unnecessary latency and memory overhead to every commuter's arrival lookup.
+   * Screen side: The screen asks two questions in parallel (getStop for validity/metadata, getBus for arrivals), but fails to coordinate their resolution. The screen allows the arrival response to clobber the validation error, and blindly re-polls an already-invalid code every 20 seconds. That race condition and timer leak are entirely client-side concerns.
+
+3. Name one heuristic this repair could break while it serves the one above, and how.
+Heuristic 1: Visibility of system status (as well as Heuristic 7: Flexibility and efficiency of use).
+   * How: Forcing the screen to hold a blocking "checking…" state until both lookups complete introduces head-of-line blocking for the app's primary function. For a commuter standing at a bus stop on a weak cellular connection, bus arrivals from /api/bus typically return in 200–300 ms. If /api/stop lags (e.g. calculating haversine distances across 5,000 stops) or drops packets, the commuter is left staring at "checking…" instead of seeing the bus that is arriving in 1 minute. Real-time arrival visibility should not be held hostage to secondary stop metadata.
+
+4. Propose the smallest alternative that would make the same thing true.
+Coordinate the two asynchronous results purely inside LiveArrivalsScreen.tsx:
+   * In fetchBusData, coordinate the requests (e.g. using Promise.allSettled([getStop(code), getBus(code)]) or checking completion flags).
+   * If getStop rejects with not_found (404), commit setBusState('not_found') and discard the bus arrival result.
+   * If the active code is marked not_found, do not fire or allow the 20-second background refresh interval to poll that invalid code.
+   * Leave api/bus.js and src/data.js untouched. This prevents cold-start pagination bloat on the serverless backend, keeps arrivals fast, and fixes the flicker and overwrite in around 15–20 lines of frontend logic.
+
+5. Tell me exactly what to do on the live address to check that the repair worked.
+   * Step 1: Open https://catchmybusnew.vercel.app/ and go to the Live Arrivals tab.
+   * Step 2: In the "Bus stop code" input, enter 88888 (or 00000) and tap Show buses.
+   * Step 3: Confirm that the screen displays a brief loading state and transitions directly to the red warning: "Bus stop code is invalid!! The 5-digit code is printed on the pole at the bus stop." Confirm that the typed input 88888 remains in the input field.
+   * Step 4 (Arbiter test): Without touching the screen, wait 45 seconds (spanning two full 20-second refresh cycles). Verify that the invalid message remains steadily on screen and never flickers or reverts to "No bus services at bus stop 88888 right now!!".
+   * Step 5: Enter a known valid stop code (e.g. 01039) and tap Show buses. Verify that stop info ("Bugis Cube") and arrival times load immediately, and that the 20-second automatic refresh resumes normally.
+```
+
+**My decision (before asking it to build):**
+
+I accepted arguments 1, 2 and 3 and the alternative in 4, with one change.
+
+- Argument 1 corrected a mistake in my plan: on Vercel each API route runs in its own instance, so `api/bus.js` cannot read the stop list cached inside `api/stop.js`. My proposed system-side fix would have made every arrivals call load 5,000+ stops on a cold start.
+- Argument 2 changed the half. By the test "could the screen fix this with what it already has?", the answer is yes: `/api/stop` already answers 404 for a code that does not exist, and the screen lets the "empty buses" answer overwrite it. So the finding belongs to the **screen**, not the system as I, RK and the arbiter's prompt had it. (`/api/bus` still answers 200 with an empty list for a fake code, which is a weakness for anyone calling the API directly, but the product does not need that changed to make the repair line true.)
+- Argument 3 is right that arrivals must not wait for the stop lookup on a weak connection.
+- Argument 4's `Promise.allSettled` would wait for both lookups, which is exactly the blocking argument 3 warned against. I replaced it with a precedence rule that never waits: show arrivals as soon as they arrive; if the stop lookup later says not found, switch to the invalid message and stop polling; and if the bus lookup returns empty before the stop lookup has answered, keep the "Checking…" state rather than show "no bus services".
+- This keeps all three parts of the repair line the arbiter suggested (not found at once and keep the typed code — mine; a checking state until there is an answer — RK's; a refresh never overwrites invalid — the arbiter's).
+
+**Build instruction sent:**
+
+```
+Build the screen-side repair, in LiveArrivalsScreen.tsx only. Rules: (1) show arrivals as soon as getBus returns, do not wait for getStop; (2) if getStop rejects with not_found, set busState to not_found, keep the typed code in the input, and stop the 20-second refresh for that code; (3) never let an empty or success bus result overwrite a not_found state; (4) if getBus returns empty before getStop has answered, keep the loading/"Checking…" state until getStop settles. Do not use Promise.allSettled (it would block arrivals on the stop lookup). Leave api/bus.js and data.js unchanged. Change nothing else.
+```
+
+**Agent's report after building (verbatim, ran for 116 s; edited 1 file: src/components/LiveArrivalsScreen.tsx):**
+
+```
+I have built the screen-side repair in LiveArrivalsScreen.tsx:
+
+* Immediate Arrivals: When getBus returns active services, arrival times are rendered immediately without waiting for getStop.
+* Invalid Stop Handling: If getStop rejects with not_found, busState is set to 'not_found', the typed code remains in the input field, and the 20-second automatic refresh is disabled for that code.
+* Race Protection: A successful or empty getBus response can never overwrite an established not_found state.
+* Pending Stop Resolution on Empty Bus Results: If getBus returns an empty service list before getStop has answered, the view remains in the loading / "Checking…" state until getStop settles, avoiding any split-second flashing of "no bus services".
+* api/bus.js and src/data.js were left untouched.
+```
+
+**Commit:** `[COMMIT MESSAGE AS IT APPEARS ON GITHUB]` — [DAY, TIME]. Files changed: src/components/LiveArrivalsScreen.tsx only. [CONFIRM ON GITHUB THAT NO OTHER FILE CHANGED.]
+
+**Check on the live address after Vercel redeployed ([TIME], Android Chrome and laptop Chrome):**
+- 88888 → [WHAT YOU SAW: brief "Checking…", then the red "Bus stop code is invalid!!"; code still in the box]. Waited 45 s without touching: [STAYED / DID NOT STAY].
+- 00000 → [SAME]. 12345 → [SAME].
+- Laptop, Network panel, for 88888: /api/stop → [404], /api/bus → [200, empty list]; further /api/bus calls for 88888 after the invalid message: [NONE / SOME].
+- 01039 → "Bugis Cube · Nth Bridge Rd" and arrival times [loaded at once]; "Last updated" advanced after 20 s: [YES/NO].
+- /api/health → [keyConfigured true, ltaStatus 200, dataGovStatus 200]. Disqus box and privacy footer still on the page: [YES].
 
 
 
