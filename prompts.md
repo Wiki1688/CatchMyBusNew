@@ -577,3 +577,153 @@ variable LTA_ACCOUNT_KEY. A real BusStops record, from the LTA documentation, lo
 **What I did with it.** The app is working based on my criteria and I stopped prompting.
 
 ---
+
+## Problem Set 4 — Adversarial collaboration (28–29 Sep 2026)
+
+### 1. Blind arbiter — stop code that does not exist (rated 3 by me, 1 by RK)
+
+Run on Mon 28 Sep 2026, in a new Claude chat outside my project with memory off, so the arbiter could not see my repository, my predictions.md or the conversation in which I built the product. Coin toss: [HEADS/TAILS], so my finding (rewritten in plain third-person wording) was Reviewer [A] and RK's finding, pasted as posted on my Disqus board, was Reviewer [B].
+
+**Prompt sent:**
+
+```
+ROLE: You are a neutral arbiter between two usability reviewers who rated the same
+problem differently. You do not know which of them built the product. Do not try to
+work it out.
+
+CONTEXT: The product is an AI-augmented web app. It is for a bus commuter who wants
+to see, at the stop, when her usual buses are coming and what the weather is doing
+there, so she can decide whether to leave now.
+Both reviewers inspected it against Nielsen's ten usability heuristics and rated the
+problem on this severity scale:
+0 I don't agree that this is a usability problem at all.
+1 Cosmetic problem only. Need not be fixed unless extra time is available.
+2 Minor usability problem. Fixing this should be given low priority.
+3 Major usability problem. Important to fix, so should be given high priority.
+4 Usability catastrophe. Imperative to fix before the product can be released.
+A rating rests on four factors: how often the problem happens, what it costs when it
+does, whether the person can learn around it, and whether it damages the product's
+standing out of proportion.
+
+REVIEWER A:
+Where: Live Arrivals screen, stop code box.
+What they did, what they saw: Typed 99999 and pressed Show buses. The message read
+"No bus services at bus stop 99999 right now!! Check the 5-digit code on the bus
+stop pole, or try again after 5:30 am." Only after pressing Show buses several more
+times did it change to "Bus stop code is invalid!!".
+Which heuristic: 9, Help Users Recognize, Diagnose, and Recover from Errors.
+Screen or system: System. The bus route answers "success, zero buses" for a code
+that does not exist, so the screen cannot tell a wrong code from a real stop with no
+buses.
+Severity, and why: 3, driven by whether the person can learn around it. Nothing
+tells them the code is wrong, so it catches them every time.
+The repair: A code that does not exist gets a clear "not found" message at once,
+keeps what was typed, and looks different from a real stop with no buses.
+
+REVIEWER B:
+Where: Main screen, bus stop code input.
+What I did, what I saw: I entered the invalid bus stop code 00000. At first the app
+said there were no bus services at that stop. After around 20 seconds, when the app
+refreshed automatically, the message changed and correctly said that the bus stop
+code was invalid.
+Which heuristic: 9 — Help Users Recognize, Diagnose, and Recover from Errors.
+Screen or system: System, because the invalid stop is only identified correctly
+after the next automatic refresh.
+Severity, and why: 1. The first message can briefly confuse the user, but the app
+corrects the message automatically after the next refresh.
+The repair: The app should check whether the bus stop code is valid before showing
+the no-bus-services message. If it is still checking, it should show a
+checking/loading message first.
+
+EVIDENCE NEITHER REVIEWER CONTROLS:
+- Reviewers who raised this problem independently, counting A and B: 2, out of 5
+- Severities that reviewers other than A and B gave this problem: NONE
+
+GOAL: Judge the evidence, not the reviewers.
+1. Say whether A and B describe the same problem. If they do not, say so and stop.
+2. For each of the four factors, say what the evidence shows and what it cannot show.
+3. Give the severity the evidence supports, and name the factor that decided it.
+4. Name the one observation that would change your rating, and say how it could be
+   collected quickly.
+
+GUARDRAILS: Do not split the difference between A and B unless the evidence puts the
+rating there. If the evidence is too thin to decide, say so plainly instead of
+inventing a reason. Do not ask which reviewer built the product.
+```
+
+**Arbiter's answer (verbatim):**
+
+```
+1. Same problem?
+Yes. Both reviewers entered a stop code that doesn't exist (99999 and 00000). Both first got the message for a real stop with no buses, and both saw the correct "invalid" message only on a later request. Both chose Heuristic 9 and both put the fault in the system, not the screen.
+They disagree on one thing: what brings up the correct message. A says it took several more presses. B says it came on its own at the next refresh, about 20 seconds later. That is a disagreement about how the problem ends, not about what the problem is.
+
+2. The four factors
+How often it happens
+* What the evidence shows: The fault repeated with two different invalid codes and two different reviewers, so it looks like it happens every time a code doesn't exist. It is limited to that case: a mistyped or misremembered code.
+* What it cannot show: How often real commuters enter a wrong code. A regular rider with saved stops may almost never do it. 2 of 5 reviewers found the problem, which says how easy it is to spot, not how often users hit it.
+
+What it costs
+* What the evidence shows: The first message is wrong about the one question the app exists to answer: are buses coming? It also suggests service has ended ("try again after 5:30 am"). A commuter at the stop could act on that and walk, call a taxi, or give up. On the other hand, the same message says "Check the 5-digit code on the bus stop pole," which points toward the real cause. Both reviewers say the correct message arrived within about 20 seconds or a few presses.
+* What it cannot show: Whether anyone acts on the wrong message before the correction arrives. Also whether the correction is reliable: A and B describe different triggers, and neither says whether it happened every time.
+
+Whether people can learn around it
+* What the evidence shows: A says nothing tells the user the code is wrong. The evidence partly contradicts this: the first message hints at checking the code, and the correct message does appear. B's view that the fix is automatic depends on the user waiting and watching. Neither view is shown by the evidence. Because wrong codes are occasional, each time will likely feel new, so there is little chance to build a habit. But the hint in the message is a built-in way out.
+* What it cannot show: Whether users notice the message change, or read the hint about the code.
+
+Damage to the product's standing
+* What the evidence shows: Telling someone with a mistyped code that there are no buses at their stop is the kind of error that makes people distrust the arrival times in general. The app also contradicts itself within about 20 seconds.
+* What it cannot show: Any real user reaction. No other reviewer gave a severity for this problem, so there's nothing to compare against.
+
+3. Severity the evidence supports: 2 (minor), provisional
+Deciding factor: cost. The evidence does not support 3. A's reasoning depends on the user having no signal and no way out, but the first message already hints at the code, and both reviewers saw the correct message appear shortly after. It also does not support 1. The first message is factually wrong about the app's main question, and it is shown at the moment the commuter is deciding whether to leave. A cosmetic rating doesn't fit that.
+2 is not a midpoint between A and B. It comes from a real cost that lasts a short time and comes with a partial hint to recover. The evidence is thin, though: 2 reviewers, no severities from anyone else, and conflicting accounts of how the correction happens. Treat the rating as provisional.
+
+4. The one observation that would change it
+Does the correct "invalid" message arrive on its own, reliably and quickly, with no user action?
+* If it arrives reliably within about 20 seconds, the rating stays at 2.
+* If it only comes after repeated presses, or doesn't always come, users are left with a wrong answer and no prompt to press again. That moves it to 3.
+How to check quickly (about 10 minutes): Enter 4 or 5 made-up codes. For each one, don't touch the screen, time how long the correct message takes, and read the stop-lookup responses in the browser's network tab. Then repeat with quick presses of Show buses. This settles the one point where A and B disagree, and shows whether the first reply for an unknown code is always "success, zero buses."
+```
+
+**Live test after the arbiter (Mon 28 Sep 2026, [TIME] SGT, Android Chrome on the live address):**
+I typed 88888, pressed Show buses and did not touch the screen. The first message was "No bus services at bus stop 88888 right now!! Check the 5-digit code on the bus stop pole, or try again after 5:30 am." About every 20 seconds, at the automatic refresh, the red "Bus stop code is invalid!!" banner appeared for a split second and then the "no bus services" message came back. The invalid message stayed on screen only after I pressed Show buses several times. This is the observation the arbiter said would move the rating to 3 ("if it only comes after repeated presses, or doesn't always come"), so I record the severity as 3. It also explains the two accounts: RK looked at the moment of the flicker and saw the app "correct itself"; I saw the steady state.
+
+**Follow-up sent to the arbiter (same chat, after the live test):**
+
+```
+Live test: I typed 88888 and did not touch the screen. The first message was "No bus services at bus stop 88888 right now!!". About every 20 seconds, at the automatic refresh, the red "Bus stop code is invalid!!" banner appeared for a split second and then the "no bus services" message came back. The invalid message stayed only after I pressed Show buses several times. Tested at about 15:26 on an Android phone.
+```
+
+**Arbiter's follow-up answer (verbatim):**
+
+```
+Yes, 3 is right. Your test meets the condition I set for moving to 3, and it actually shows something worse than either reviewer described.
+
+Why it moves to 3
+* The correction doesn't hold on its own. The "invalid" banner flashes for a split second every ~20 seconds, then "no bus services" comes back. A user who glances at the screen will almost always see the wrong message. A flash that disappears is easy to miss, and it looks like a glitch rather than an answer.
+* The correct message sticks only after several presses of Show buses. Nothing on screen tells the user to do that. This is the evidence that settles learnability. It supports A's point that nothing tells the user the code is wrong, and it contradicts B's view that the app fixes itself.
+* It costs more at 15:26. Real stops have buses at that time of day, so "no bus services right now" is a confident wrong answer to the app's main question, given during service hours.
+The deciding factor moves from cost to learnability. The only way out is repeated pressing, and the app never signals it.
+
+Why not 4
+It still happens only when the code doesn't exist, and a recovery path exists (pressing again, plus the "check the code on the pole" hint).
+
+Caveats to record
+* It's one trial. One code, one device, and no network log. I'd still record 3: the flip-back is a behaviour you watched happen, not a matter of opinion. But 2 or 3 more codes and a look at the network tab would confirm the cause. A likely one is that two responses compete for the screen, and the "zero buses" reply wins.
+* It explains B's account. B may have seen the flash and taken it as a lasting correction. That's worth noting so B's rating is read in that light, not dismissed.
+
+Update to the repair
+A code that doesn't exist should show a clear "not found" message at once, keep what was typed, and look different from a real stop with no buses (A's repair). The app should show a checking message until it has an answer (B's repair). And once the app has marked a code as invalid, a later refresh should not replace that with "no bus services."
+```
+
+**What I took from the arbiter:** it did not accept my 3 on my reasoning (it pointed out that the first message already hints at checking the code, which I had discounted because I knew the real cause), and it did not accept RK's 1 (the wrong message appears at the moment the commuter decides whether to leave). It named the single observation that separated the two views and told me how to collect it, and the live test settled it.
+
+**Recorded in the four-way table, row 4:** my severity 3, RK's 1, arbiter 2 (provisional) → 3 after the live test, deciding factor learnability. The arbiter's caveat (one code, one device, no network log) is why repair R1's live check below uses three codes and the Network panel.
+
+**Repair line carried into R1 (merged from A's and B's repairs, as the arbiter suggested):** a code that does not exist shows a clear "not found" message at once and keeps what was typed; a "checking…" message shows until the app has an answer; and once a code is marked invalid, a later refresh never replaces that with "no bus services".
+
+
+
+
+
