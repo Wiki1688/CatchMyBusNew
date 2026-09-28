@@ -70,9 +70,13 @@ export default async function handler(req, res) {
         }
       }
 
+      const nextBus = svc.NextBus || busList[0] || {};
+      const load = typeof nextBus.Load === 'string' ? nextBus.Load.trim() : '';
+
       return {
         serviceNo: String(svc.ServiceNo || ''),
         next: nextMinutes,
+        load,
       };
     });
 

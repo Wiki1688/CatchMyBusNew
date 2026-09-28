@@ -1,6 +1,7 @@
 export interface BusService {
   serviceNo: string;
   next: number[]; // 0 means "Arriving", 1 or 2 whole numbers
+  load?: string; // SEA, SDA, LSD
 }
 
 export interface BusArrivalData {

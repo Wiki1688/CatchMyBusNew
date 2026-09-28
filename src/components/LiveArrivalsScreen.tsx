@@ -299,6 +299,16 @@ export const LiveArrivalsScreen: React.FC<LiveArrivalsScreenProps> = ({
     );
   };
 
+  // Map LTA Load value (SEA, SDA, LSD) to human-readable crowding status
+  const formatCrowding = (load?: string): string | null => {
+    if (!load) return null;
+    const upper = load.trim().toUpperCase();
+    if (upper === 'SEA' || upper === 'SEATS AVAILABLE') return 'Seats available';
+    if (upper === 'SDA' || upper === 'STANDING') return 'Standing';
+    if (upper === 'LSD' || upper === 'LIMITED STANDING') return 'Limited standing';
+    return null;
+  };
+
   return (
     <div className="main-content" id="live-arrivals-screen">
       {/* 5-digit bus stop code input with "Show buses" button and description/road name search */}
@@ -434,13 +444,21 @@ export const LiveArrivalsScreen: React.FC<LiveArrivalsScreenProps> = ({
           <ul className="services-list" id="bus-services-list">
             {busData.services.map((svc) => {
               const starred = isStarred(svc.serviceNo);
+              const crowding = formatCrowding(svc.load);
               return (
                 <li key={svc.serviceNo} className="service-row" id={`service-row-${svc.serviceNo}`}>
                   <div className="service-main">
                     <span className="service-badge">{svc.serviceNo}</span>
-                    <span className="service-arrivals">
-                      {formatArrivals(svc.serviceNo, svc.next)}
-                    </span>
+                    <div className="service-details">
+                      <span className="service-arrivals">
+                        {formatArrivals(svc.serviceNo, svc.next)}
+                      </span>
+                      {crowding && svc.next && svc.next.length > 0 && (
+                        <span className={`service-crowding ${svc.load ? svc.load.toLowerCase() : ''}`}>
+                          {crowding}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <button
                     type="button"

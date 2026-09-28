@@ -876,9 +876,16 @@ html, body {
 
 .service-main {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 14px;
   flex: 1;
+  min-width: 0;
+}
+
+.service-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -906,6 +913,24 @@ html, body {
 .arrival-pill {
   font-weight: 800;
   color: #059669;
+}
+
+.service-crowding {
+  font-size: 14px;
+  color: var(--text-subtle);
+  font-weight: 600;
+}
+
+.service-crowding.sea {
+  color: #059669;
+}
+
+.service-crowding.sda {
+  color: #d97706;
+}
+
+.service-crowding.lsd {
+  color: #dc2626;
 }
 
 .star-btn {
