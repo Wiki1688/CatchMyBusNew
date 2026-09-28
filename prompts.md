@@ -851,5 +851,262 @@ I have built the screen-side repair in LiveArrivalsScreen.tsx:
 - Input 88888 → The red "Bus stop code is invalid!!" error message was displayed. Waited 45 s without touching, and the correct error message stayed.
 - Repeated for 00000 and 12345 with same outcome.
 
+### 3. Repairs R2–R5 — one argument round for three groupmate findings, then one build per repair
+
+Coding agent: Google AI Studio (Gemini 3.8 Flash), in my existing CatchMyBusNew project, Mon 28 Sep 2026. R1 (unknown stop code, section 2) was already live.
+
+The three findings and the repair I proposed for each: A = TS's finding 1 (no destination or crowding on bus rows, severity 3, H1); B = RK's finding 2 (search suggestions stay open, severity 2, H3); C = TS's finding 2 (area change gives no confirmation, severity 2, H1). I asked the agent to argue against all three at once, then asked it to build them one at a time so that each is its own commit. In the build messages below I left the bracketed placeholders from my notes in the text I sent; the agent built the version in its own argument 4 each time.
+
+**Prompt sent (argue against all three):**
+
+```
+ROLE: You are a sceptical senior developer and usability reviewer working in my
+existing project. Before you write any code, your job is to argue against each
+repair I propose.
+
+CONTEXT:
+- Live address: https://catchmybusnew.vercel.app/
+- Who the product is for: a bus commuter who wants to see, at the stop, when her
+  usual buses are coming and what the weather is doing there.
+- The previous commit already fixed unknown stop codes in LiveArrivalsScreen.tsx
+  (not_found is shown at once and never overwritten). Do not undo that.
+- Three findings from my groupmates, each with the repair I propose:
+
+FINDING A (raised by TS, severity 3, heuristic 1 Visibility of System Status)
+Where: Live Arrivals screen, the bus list after choosing a stop.
+What she did, what she saw: tapped each bus number; nothing opened. Each row shows
+only the bus number and two arrival times — no destination, no crowding.
+Screen or system: system — the page is never sent destination or crowding, although
+LTA's BusArrival feed carries Load (SEA/SDA/LSD) and DestinationCode per bus.
+Repair line: each bus row shows its destination and how crowded the next bus is.
+Repair I propose: in api/bus.js pass through Load for the next bus and
+DestinationCode; resolve DestinationCode to a stop description (a shared helper that
+loads the LTA stop list, as api/stop.js does, or a call to /api/stop from the
+screen); in LiveArrivalsScreen.tsx show "→ [destination]" and "Seats / Standing /
+Limited" on each row. No route-with-all-stops view.
+
+FINDING B (raised by RK, severity 2, heuristic 3 User Control and Freedom)
+Where: Live Arrivals screen, "Search by bus stop description or road name".
+What he did, what he saw: chose a stop from the suggestions; the stop loaded but the
+suggestion list stayed open until he deleted the text or reloaded.
+Screen or system: screen.
+Repair line: choosing a suggestion closes the list and clears the search box.
+Repair I propose: in LiveArrivalsScreen.tsx, on selecting a shortlisted stop, clear
+searchQuery and hide the list.
+
+FINDING C (raised by TS, severity 2, heuristic 1 Visibility of System Status)
+Where: Live Arrivals screen, "Forecast for the ___ area" dropdown.
+What she did, what she saw: changed the area from City to Tuas, Changi, Woodlands;
+only the heading changed, every area said "Cloudy" with the same "Last updated",
+no loading sign.
+Screen or system: screen — the page already has all areas' forecasts from /api/rain.
+Repair line: the forecast line names the area ("Tuas: Cloudy") and a brief
+"Checking…" shows while the area changes, so the person can see it updated.
+Repair I propose: in WeatherPanel.tsx prefix the forecast with the area name and show
+the loading sentence for a moment on area change.
+
+GOAL: For EACH of A, B and C, in turn:
+1. Does the repair solve the problem the finding describes, or a problem I already
+   believed I had?
+2. Is the repair in the right half (screen or system)?
+3. Name one heuristic it could break, and how.
+4. Propose the smallest alternative that makes the same repair line true.
+5. Say exactly what to do on the live address to check it worked.
+Then say which of the three you would build first and why.
+
+OUTPUT: Arguments only, as three numbered lists. Then stop. Write no code until I
+reply with the repair I have chosen. I will ask for them ONE AT A TIME so that each
+is a separate commit.
+
+GUARDRAILS: Do not tell me a repair is good. If you have no strong reason to doubt
+one, say so plainly. When I ask you to build, change only what that one repair needs
+and nothing else. Do not remove Disqus or the privacy notice, and do not break
+/api/health or the not-found handling from the previous commit.
+```
+
+**Agent's arguments (verbatim, ran for 27 s, read one file first):**
+
+```
+Here are my usability and architectural reviews for each proposed repair:
+
+Finding A (Bus destination and crowding)
+1. Does it solve the problem the finding describes, or a problem I already believed I had?
+   * Largely a problem you already believed you had. The user's actual behavior in the finding was "tapped each bus number; nothing opened"—she expected interactive drill-down or route details.
+   * Your proposed repair does not make rows tappable ("No route-with-all-stops view"). Instead, you jumped to pulling Load and DestinationCode from LTA's feed because you knew the API had those fields. Resolving DestinationCode to a descriptive stop name by loading LTA's full ~5,000-stop dataset inside api/bus.js (or issuing N /api/stop requests per bus from the client) is heavy backend complexity that delays arrivals for a commuter who is already standing at her usual stop.
+2. Is the repair in the right half (screen or system)?
+   * It sits in both, but pushes heavy work to the wrong half. api/bus.js is currently a fast, low-latency proxy. Turning it into a data joiner that caches and matches 5,000 stops or doing N+1 /api/stop queries from the mobile browser introduces latency directly into the critical arrival countdown path.
+3. Name one heuristic it could break, and how.
+   * Heuristic 8: Aesthetic and Minimalist Design. Sticking → [Destination description] and text like Seats Available / Standing Available / Limited Standing onto a narrow mobile row already packed with the service badge, two arrival countdowns, and the star button will cause severe line wrapping and push the primary information (arrival minutes) out of immediate scan view.
+4. Propose the smallest alternative that makes the same repair line true.
+   * In api/bus.js, pass through only load (mapped to seats / standing / limited or SEA/SDA/LSD) and raw destinationCode without doing full stop description joins.
+   * On the screen, render a compact crowding indicator (e.g. a small badge or pill: Seats / Standing / Limited) next to the first arrival, and remove any hover/click affordances that deceive users into thinking the row opens a route view.
+5. Say exactly what to do on the live address to check it worked.
+   * Open https://catchmybusnew.vercel.app/ on a mobile viewport.
+   * Enter stop 01039 and click Show buses.
+   * Observe each service row (e.g. 12, 33): verify that the destination and crowding status appear legibly without pushing the arrival times or the star button off the screen, and verify arrival times still load in under 1 second.
+
+Finding B (Suggestion list stays open)
+1. Does it solve the problem the finding describes, or a problem I already believed I had?
+   * It solves the exact problem described. RK selected a suggestion, the stop loaded, but the list stayed open obscuring the screen. Clearing the search and closing the list directly repairs the interaction.
+2. Is the repair in the right half (screen or system)?
+   * Right half (screen). The search query and dropdown suggestions are purely client-side React states in LiveArrivalsScreen.tsx.
+3. Name one heuristic it could break, and how.
+   * Heuristic 3: User Control and Freedom. If clearing searchQuery completely wipes what the user typed without any way to see recent suggestions, a user who selected the wrong stop in a multi-stop road search (e.g. "Victoria St") loses their search term and must type it again from scratch.
+4. Propose the smallest alternative that makes the same repair line true.
+   * In LiveArrivalsScreen.tsx, inside handleSelectShortlistedStop: add setSearchQuery('') and setShortlistedStops([]). This immediately hides the dropdown container and resets the input.
+5. Say exactly what to do on the live address to check it worked.
+   * Open https://catchmybusnew.vercel.app/.
+   * In Search by bus stop description or road name, type Bugis.
+   * When the Related Bus Stops suggestion panel opens, tap 01119 (Bugis Stn Exit A).
+   * Verify that the suggestion box disappears instantly, the search input becomes empty, and the arrivals for stop 01119 load below.
+
+Finding C (Forecast area dropdown feedback)
+1. Does it solve the problem the finding describes, or a problem I already believed I had?
+   * A problem you believed you had (and introduces a UX anti-pattern).
+   * The weather data for all 47 Singapore areas is already present in client memory from the initial /api/rain fetch. Adding an artificial "Checking…" spinner for data already in memory is placebo latency that slows down the user interface on purpose.
+   * The finding simply noted that because many areas had the same forecast ("Cloudy"), TS had no confirmation that selecting a new area took effect.
+2. Is the repair in the right half (screen or system)?
+   * Right half (screen). All area forecasts already exist in rainData.areas on the client.
+3. Name one heuristic it could break, and how.
+   * Heuristic 1: Visibility of System Status. Introducing a fake "Checking…" loading banner lies about the system state by pretending a network call is occurring. If the user rapidly browses between areas, this causes visual stutter and layout shifts.
+4. Propose the smallest alternative that makes the same repair line true.
+   * In WeatherPanel.tsx, format the forecast line to include the area name (e.g. <div className="weather-condition">{selectedArea}: {currentAreaForecast.forecast}</div>).
+   * When changing from "City" to "Tuas", the text immediately changes from "City: Cloudy" to "Tuas: Cloudy", giving immediate visual feedback with zero artificial lag or fake loading states.
+5. Say exactly what to do on the live address to check it worked.
+   * Open https://catchmybusnew.vercel.app/.
+   * Scroll down to the weather section. Note the forecast reading (e.g. City: Cloudy).
+   * Change the dropdown to Woodlands.
+   * Verify that the text immediately updates to Woodlands: Cloudy (or the respective forecast), confirming the selection registered without any visual delay.
+
+Recommendation: Which to build first and why
+Build B first.
+* It is a purely screen-side defect with zero architectural risk, zero API changes, and an unambiguous repair: clearing the query and closing the suggestions on selection. The open suggestion list currently blocks the commuter from seeing the arrivals she just requested.
+* Finding A requires data contract decisions across api/bus.js and layout adjustments, while Finding C requires avoiding the fake loading spinner trap. B is a clean, instant win.
+```
+
+**My decisions after reading the arguments:**
+
+- B: accepted as proposed; the agent had no strong doubt and its alternative was my repair. I noted its heuristic-3 point (the typed search term is lost) and accepted that cost, because the finding was that the open list hid the arrivals.
+- C: the agent argued that a "Checking…" state is fake, since all 47 areas are already in memory, and that only the area label is needed. [CHOOSE ONE AND DELETE THE OTHER:] (i) I turned that argument down and kept a brief 350 ms loading sentence as well as the label, because TS's finding was that "nothing confirms it worked" and a visible change of state is what a person notices; I accept that it is not a real network wait. / (ii) I accepted the argument, but my build message still asked for the loading sentence and the agent built it; on reflection I [kept it / removed it in a later commit].
+- A: I accepted the agent's point that the row is narrow and that a full destination join in api/bus.js would slow arrivals, so I split A into two commits: crowding first (Load passed through, shown as a short label), then destination resolved on the screen through /api/stop with a cache rather than inside api/bus.js. I did not make rows tappable; TS's request for a route view is a new feature, and I said so in my reply.
+- Build order: B, C, A — as the agent recommended.
+
+---
+
+### 4. R2 — close search suggestions after a stop is chosen (H3, severity 2, raised by RK)
+
+**Build instruction sent:**
+```
+Build repair B only: in LiveArrivalsScreen.tsx, when a shortlisted stop is selected,
+clear the search box and hide the suggestion list, [OR: USE THE ALTERNATIVE YOU
+CHOSE FROM ITS ARGUMENTS]. Change nothing else.
+```
+
+**Agent's report (verbatim, ran for 27 s; edited 1 file: src/components/LiveArrivalsScreen.tsx):**
+```
+Repair B has been implemented in LiveArrivalsScreen.tsx:
+* When a shortlisted stop is selected (handleSelectShortlistedStop), any pending search debounce timer is cancelled, searchQuery is reset to an empty string, and shortlistedStops is cleared to immediately close and hide the suggestion dropdown.
+* All other behavior, error handling, and integrations remain unchanged.
+```
+
+**Live check:** typed "Bugis", tapped [STOP] → [list closed / box cleared / arrivals loaded]. 88888 → [still invalid at once].
+
+---
+
+### 4a. Unplanned fix between R2 and R3 — duplicate React key warning (not tied to a finding)
+
+After R2 the AI Studio preview showed a build error. I sent: `Fix the errors in the app`.
+
+**Agent's report (verbatim, ran for 59 s; edited 2 files: LiveArrivalsScreen.tsx, FavouritesScreen.tsx):**
+```
+The duplicate key error (Encountered two children with the same key, '0') has been fixed:
+Cause
+When two buses for the same service arrive back-to-back (bus bunching, resulting in arrival times [0, 0]), mapping over the arrival minutes used key={min}. Both <span className="arrival-pill">Arriving</span> elements received key={0}, causing React's duplicate sibling key warning inside <>{parts[0]}, {parts[1]}</>.
+Fix
+* Updated formatArrivals in LiveArrivalsScreen.tsx to key the arrival pill by index (key={arr-${idx}}).
+* Updated formatBusArrivals in FavouritesScreen.tsx with the same unique index-based key protection.
+```
+
+**Note:** this is a code-quality fix with no visible change for the user (a console warning when two buses of the same service are both "Arriving"). It does not trace to any groupmate finding; I record it here so that every commit in the history is accounted for. 
+
+---
+
+### 5. R3 — forecast line names the area, brief loading on change (H1, severity 2, raised by TS)
+
+**Build instruction sent:**
+```
+Build repair C only: in WeatherPanel.tsx, show the forecast as "[Area]: [forecast]"
+and show the loading sentence briefly when the area changes, [OR: THE ALTERNATIVE
+YOU CHOSE]. Change nothing else.
+```
+
+**Agent's report (verbatim, ran for 74 s; edited 1 file: src/components/WeatherPanel.tsx):**
+```
+Repair C has been implemented in WeatherPanel.tsx:
+* Area-Prefixed Forecast: The condition line now displays {selectedArea}: {currentAreaForecast.forecast} (e.g., City: Cloudy or Tuas: Cloudy).
+* Brief Loading Feedback on Area Selection: When a new area is chosen from the dropdown, WeatherPanel briefly displays the loading sentence (Checking the weather for the [Area] area…) for 350ms before displaying the updated area forecast, visually confirming the selection was registered.
+* No other components or files were changed.
+```
+
+**Live check:** changed City → Tuas → Woodlands: [saw "Checking…" then "Tuas: …"]; forecast text [did / did not] differ between areas at that time. 88888 → [still invalid].
+
+---
+
+### 6. R4 — crowding on each bus row (H1, severity 3, raised by TS; part 1 of finding A)
+
+**Build instruction sent:**
+```
+Build repair A, crowding only, for now: in api/bus.js pass through the Load value of
+the next bus for each service (SEA, SDA, LSD); in LiveArrivalsScreen.tsx show it on
+each row as "Seats available", "Standing" or "Limited standing". Do not add
+destination in this commit. Change nothing else. Keep /api/health and the not-found
+handling working.
+```
+
+**Agent's report (verbatim, ran for 131 s; edited 4 files: api/bus.js, src/types.ts, src/index.css, src/components/LiveArrivalsScreen.tsx):**
+```
+Repair A (crowding only) has been built:
+1. api/bus.js:
+   * Passed through the Load value (SEA, SDA, LSD) for the next bus of each service in the response (load).
+2. src/types.ts:
+   * Added load?: string; to BusService.
+3. src/components/LiveArrivalsScreen.tsx & src/index.css:
+   * Added formatCrowding to map:
+      * SEA → "Seats available"
+      * SDA → "Standing"
+      * LSD → "Limited standing"
+   * Rendered the crowding status on each bus service row beneath the arrival countdown.
+   * Preserved /api/health, the not-found handling from the previous commit, Disqus, and all other existing behavior. Destination was omitted as requested.
+```
+
+**Live check ([TIME]):** 01039 → each row shows [Seats available / Standing / Limited standing]; `/api/bus?BusStopCode=01039` now carries a `load` field; arrival times still on one screen width on my phone: [YES]; 88888 → [still invalid]; /api/health → [true / 200 / 200].
+
+---
+
+### 7. R5 — destination on each bus row (H1, severity 3, raised by TS; part 2 of finding A)
+
+**Build instruction sent:**
+```
+Now add destination to repair A: resolve each service's DestinationCode to the stop
+description using [THE APPROACH YOU CHOSE], and show it on the row as "→ [name]".
+Change nothing else.
+```
+
+**Agent's report (verbatim, ran for 275 s; edited 4 files: api/bus.js, src/types.ts, src/index.css, src/components/LiveArrivalsScreen.tsx):**
+```
+Destination display for Repair A has been built:
+1. api/bus.js:
+   * Passed through destinationCode for each service from NextBus (falling back across available upcoming buses).
+2. src/types.ts:
+   * Added destinationCode?: string; to the BusService interface.
+3. src/components/LiveArrivalsScreen.tsx & src/index.css:
+   * Implemented screen-side resolution of destinationCode to stop description using getStop (/api/stop), with in-memory caching and request deduplication to prevent redundant network calls across renders and 20-second refreshes.
+   * Displayed the resolved stop description on each service row as → [name] (e.g. → Bt Merah Int).
+   * Kept /api/health, the invalid stop not-found handling, Disqus, and crowding indicator intact.
+```
+
+**Live check:** 01039 → rows show "→ Bugis Cube" (e.g. 145) with the bus destinations depicted; arrivals still appeared within about a second; the row still fits on my phone without wrapping the minutes off-screen; 88888 → [still invalid]; /api/health → [true / 200 / 200]; Disqus box and privacy footer present: [YES].
+
+---
 
 
