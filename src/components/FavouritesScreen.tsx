@@ -343,9 +343,9 @@ export const FavouritesScreen: React.FC<FavouritesScreenProps> = ({
       return SENTENCES.FAVOURITES.savedBusNotRunning(serviceNo);
     }
 
-    const arrivals = svc.next.slice(0, 2).map((m) => {
+    const arrivals = svc.next.slice(0, 2).map((m, idx) => {
       if (m <= 0) {
-        return <span key={m} className="arrival-pill">Arriving</span>;
+        return <span key={`arr-${idx}`} className="arrival-pill">Arriving</span>;
       }
       return `${m} min`;
     });

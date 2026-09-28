@@ -281,9 +281,9 @@ export const LiveArrivalsScreen: React.FC<LiveArrivalsScreenProps> = ({
       return SENTENCES.FAVOURITES.savedBusNotRunning(serviceNo);
     }
 
-    const parts = next.slice(0, 2).map((min) => {
+    const parts = next.slice(0, 2).map((min, idx) => {
       if (min <= 0) {
-        return <span key={min} className="arrival-pill">Arriving</span>;
+        return <span key={`arr-${idx}`} className="arrival-pill">Arriving</span>;
       }
       return `${min} min`;
     });
